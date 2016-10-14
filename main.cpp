@@ -1,5 +1,5 @@
-#include "lexer/lex.h"
-#include "parser/parser.h"
+#include "compiler/lexer/lex.h"
+#include "compiler/parser/parser.h"
 
 using namespace std;
 
