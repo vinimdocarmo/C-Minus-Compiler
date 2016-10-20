@@ -12,7 +12,7 @@ using namespace std;
 
 enum Token_Type {
     TK_OP_INVALID,
-    TK_SYMBOL, // (, ), [, ]
+    TK_SYMBOL, // ; , ( ) [ ] { }
     TK_OP_ALGEBRAIC, // +, -, *, /
     TK_OP_ASSIGNMENT, // =
     TK_OP_RELATIONAL, // <=, >=, ==, !=
@@ -35,8 +35,6 @@ class Lex {
 public:
     Token get_token();
 
-    vector<Token> get_tokens();
-
     string get_lexeme() { return lexeme; }
 
     string token_stringfy(Token_Type t);
@@ -45,6 +43,11 @@ public:
     Lex(const string &source_filename);
 
 private:
+    // various member variables
+    string lexeme;
+
+    stringstream source_ss;
+
     DFA<char> dfa;
 
     int initial_state = 0;
@@ -61,7 +64,7 @@ private:
 
     void add_number_rule();
 
-// Get next character from file and echo to listing file
+// Get next character from string stream
     inline char get_char() {
         return static_cast<char>(source_ss.get());
     }
@@ -69,9 +72,4 @@ private:
     inline char get_next_char() {
         return static_cast<char>(source_ss.peek());
     }
-
-// various member variables
-    string lexeme;
-
-    stringstream source_ss;
 };

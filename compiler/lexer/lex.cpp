@@ -20,8 +20,6 @@ const map<string, Token_Type> keywords_map{
         {"if",     Token_Type::TK_RESERVED_W},
         {"int",    Token_Type::TK_RESERVED_W},
         {"void",   Token_Type::TK_RESERVED_W},
-        {"read",   Token_Type::TK_RESERVED_W},
-        {"write",  Token_Type::TK_RESERVED_W},
         {"while",  Token_Type::TK_RESERVED_W},
         {"return", Token_Type::TK_RESERVED_W}
 };
@@ -68,6 +66,8 @@ Token Lex::get_token() {
 
         c = get_char();
     }
+
+    return NULL;
 }
 
 Lex::Lex(const string &source_filename) : dfa(0, false) {
@@ -122,7 +122,7 @@ void Lex::add_identifier_rule() {
 }
 
 void Lex::add_symbol_rule() {
-    for (const char symbol : {'(', ')', '[', ']'}) {
+    for (const char symbol : {'(', ')', '[', ']', ',', ';', '{', '}'}) {
         dfa.add_transition(initial_state, symbol, Token_Type::TK_SYMBOL);
     }
 }

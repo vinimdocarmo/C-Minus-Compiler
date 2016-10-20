@@ -6,44 +6,93 @@
 class Parser {
 private:
     Lex *lex;
-    Token currToken;
 
-    void comsume();
+    Token curr_token;
+
+    void consume_token();
+
+    bool terminal(Token_Type);
+
+    bool terminal(string);
 
 //non-terminal methods
-    void program();
+    bool program();
 
-    void declaration_list();
+    bool declaration_list();
 
-    void declaration();
+    bool declaration_list_recur();
 
-    void declaration_list_recur();
+    bool declaration();
 
-    void var_declaration();
+    bool var_declaration();
 
-    void type_specifier();
+    bool type_specifier();
 
-    void fun_declaration();
+    bool fun_declaration();
 
-    void params();
+    bool params();
 
-    void param_list();
+    bool param_list();
 
-    void param_list_recur();
+    bool param_list_recur();
 
-    void param();
+    bool param();
 
-    void compound_stmt();
+    bool compound_stmt();
 
-    void compound_stmt_recur();
+    bool local_declarations();
 
-    void local_declarations();
+    bool local_declarations_recur();
 
-    void local_declarations_recur();
+    bool statement_list_recur();
+
+    bool statement_list();
+
+    bool statement();
+
+    bool expression_stmt();
+
+    bool selection_stmt();
+
+    bool iteration_stmt();
+
+    bool return_stmt();
+
+    bool expression();
+
+    bool var();
+
+    bool simple_expression();
+
+    bool re_lop();
+
+    bool additive_expression();
+
+    bool additive_expression_recur();
+
+    bool add_op();
+
+    bool term();
+
+    bool term_recur();
+
+    bool mul_op();
+
+    bool factor();
+
+    bool call();
+
+    bool args();
+
+    bool arg_list();
+
+    bool arg_list_recur();
 
 public:
 // Constructor
-    Parser(Lex &);
+    Parser(Lex& lex) : lex(&lex) {
+        this->curr_token = lex.get_token();
+    };
 
     void parse();
 };
