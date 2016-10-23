@@ -63,14 +63,8 @@ bool Parser::declaration_list() {
 bool Parser::declaration_list_recur() {
     unsigned int saved_index = curr_index_token;
 
-    if (declaration() && declaration_list_recur()) {
-        return true;
-    }
-
-    backtrack(saved_index);
-
-
-    return declaration();
+    return (declaration() && declaration_list_recur())
+            || (backtrack(saved_index), declaration());
 }
 
 // declaration → var-declaration | fun-declaration
@@ -197,13 +191,14 @@ bool Parser::expression_stmt() {
            || (backtrack(saved_index), terminal(";"));
 }
 
-// selection-stmt → if ( expression ) statement | if ( expression ) statement else statement
+// selection-stmt → if ( expression ) statement selection-stmt-expanded
 bool Parser::selection_stmt() {
-    unsigned int saved_index = curr_index_token;
+    return terminal("if") && terminal("(") && expression() && terminal(")") && statement() && selection_stmt_expanded();
+}
 
-    return (terminal("if") && terminal("(") && expression() && terminal(")") && statement())
-           || (backtrack(saved_index), terminal("if") && terminal("(") && expression() && terminal(")") && statement() &&
-                                   terminal("else") && statement());
+bool Parser::selection_stmt_expanded() {
+    bool empty = true;
+    return (terminal("else") && expression_stmt()) || empty;
 }
 
 // iteration-stmt → while ( expression ) statement
