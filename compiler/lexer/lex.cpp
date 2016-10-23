@@ -152,16 +152,32 @@ void Lex::add_symbol_rule() {
 }
 
 void Lex::add_operation_rules() {
-    dfa.add_transition(initial_state, '=', Token_Type::TK_OP_ASSIGNMENT);
-
     for (const char op : {'+', '-', '*', '/'}) {
         dfa.add_transition(initial_state, op, Token_Type::TK_OP_ALGEBRAIC);
     };
 
-    for (const string op : {">=", "<=", "==", "!="}) {
-        dfa.add_transition(initial_state, op[0], Token_Type ::TK_OP_RELATIONAL);
-        dfa.add_transition(Token_Type ::TK_OP_RELATIONAL, op[1], Token_Type ::TK_OP_RELATIONAL);
-    }
+    const int state_100 = 100;
+    const int state_101 = 101;
+    const int state_102 = 102;
+    const int state_103 = 103;
+
+    dfa.add_transition(initial_state, '>', Token_Type ::TK_OP_RELATIONAL);
+    dfa.add_transition(initial_state, '<', Token_Type ::TK_OP_RELATIONAL);
+
+    dfa.add_transition(initial_state, '>', state_100);
+    dfa.add_transition(state_100, '=', Token_Type::TK_OP_RELATIONAL);
+
+    dfa.add_transition(initial_state, '<', state_101);
+    dfa.add_transition(state_101, '=', Token_Type::TK_OP_RELATIONAL);
+
+    dfa.add_transition(initial_state, '=', state_102);
+    dfa.add_transition(state_102, '=', Token_Type::TK_OP_RELATIONAL);
+
+    dfa.add_transition(initial_state, '!', state_103);
+    dfa.add_transition(state_103, '=', Token_Type::TK_OP_RELATIONAL);
+
+    dfa.add_transition(initial_state, '=', Token_Type::TK_OP_ASSIGNMENT);
+
 }
 
 void Lex::add_white_space_rule() {
