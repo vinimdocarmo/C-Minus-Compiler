@@ -5,15 +5,21 @@
 
 class Parser {
 private:
-    Lex *lex;
+    vector<Token> tokens;
 
     Token curr_token;
+
+    unsigned int curr_index_token = 0;
 
     void consume_token();
 
     bool terminal(Token_Type);
 
     bool terminal(string);
+
+    void backtrack(int);
+
+    bool match(Token_Type);
 
 //non-terminal methods
     bool program();
@@ -58,6 +64,10 @@ private:
 
     bool return_stmt();
 
+    bool read_stmt();
+
+    bool write_stmt();
+
     bool expression();
 
     bool var();
@@ -90,8 +100,8 @@ private:
 
 public:
 // Constructor
-    Parser(Lex& lex) : lex(&lex) {
-        this->curr_token = lex.get_token();
+    Parser(vector<Token> tokens) : tokens(tokens) {
+        this->curr_token = tokens.at(curr_index_token);
     };
 
     void parse();

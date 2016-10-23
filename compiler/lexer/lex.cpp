@@ -18,8 +18,11 @@ const vector<string> token_tostring{
 
 const map<string, Token_Type> keywords_map{
         {"if",     Token_Type::TK_RESERVED_W},
+        {"else",     Token_Type::TK_RESERVED_W},
         {"int",    Token_Type::TK_RESERVED_W},
         {"void",   Token_Type::TK_RESERVED_W},
+        {"read",   Token_Type::TK_RESERVED_W},
+        {"write",   Token_Type::TK_RESERVED_W},
         {"while",  Token_Type::TK_RESERVED_W},
         {"return", Token_Type::TK_RESERVED_W}
 };
@@ -67,7 +70,23 @@ Token Lex::get_token() {
         c = get_char();
     }
 
-    return NULL;
+    Token invalid_token;
+
+    invalid_token.type = Token_Type::TK_OP_INVALID;
+
+    return invalid_token;
+}
+
+vector<Token> Lex::get_tokens() {
+    Token token;
+    vector<Token> tokens;
+
+    do {
+        token = get_token();
+        tokens.push_back(token);
+    } while (token.type != Token_Type::TK_EOS);
+
+    return tokens;
 }
 
 Lex::Lex(const string &source_filename) : dfa(0, false) {
@@ -86,7 +105,7 @@ Lex::Lex(const string &source_filename) : dfa(0, false) {
 
     dfa.reset();
 
-    this->add_states();
+    this->add_final_states();
     this->add_identifier_rule();
     this->add_symbol_rule();
     this->add_operation_rules();
@@ -99,19 +118,24 @@ string Lex::token_stringfy(Token_Type t) {
     return token_tostring[static_cast<int>(t)];
 }
 
-void Lex::add_states() {
-    dfa.add_state(Token_Type::TK_SYMBOL, true);
-    dfa.add_state(Token_Type::TK_OP_ALGEBRAIC, true);
-    dfa.add_state(Token_Type::TK_OP_ASSIGNMENT, true);
-    dfa.add_state(Token_Type::TK_OP_RELATIONAL, true);
-    dfa.add_state(Token_Type::TK_WHITESPACE, true);
-    dfa.add_state(Token_Type::TK_ID, true);
-    dfa.add_state(Token_Type::TK_RESERVED_W, true);
-    dfa.add_state(Token_Type::TK_NUMBER, true);
+void Lex::add_final_states() {
+    dfa.add_final_state(Token_Type::TK_SYMBOL);
+    dfa.add_final_state(Token_Type::TK_OP_ALGEBRAIC);
+    dfa.add_final_state(Token_Type::TK_OP_ASSIGNMENT);
+    dfa.add_final_state(Token_Type::TK_OP_RELATIONAL);
+    dfa.add_final_state(Token_Type::TK_WHITESPACE);
+    dfa.add_final_state(Token_Type::TK_ID);
+    dfa.add_final_state(Token_Type::TK_RESERVED_W);
+    dfa.add_final_state(Token_Type::TK_NUMBER);
 }
 
 void Lex::add_identifier_rule() {
     for (char c = 'a'; c <= 'z'; c++) {
+        dfa.add_transition(initial_state, c, Token_Type::TK_ID);
+        dfa.add_transition(Token_Type::TK_ID, c, Token_Type::TK_ID);
+    }
+
+    for (char c = 'A'; c <= 'Z'; c++) {
         dfa.add_transition(initial_state, c, Token_Type::TK_ID);
         dfa.add_transition(Token_Type::TK_ID, c, Token_Type::TK_ID);
     }

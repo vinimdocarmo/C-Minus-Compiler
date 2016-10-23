@@ -33,9 +33,7 @@ struct Token {
 
 class Lex {
 public:
-    Token get_token();
-
-    string get_lexeme() { return lexeme; }
+    vector<Token> get_tokens();
 
     string token_stringfy(Token_Type t);
 
@@ -43,7 +41,8 @@ public:
     Lex(const string &source_filename);
 
 private:
-    // various member variables
+
+// various member variables
     string lexeme;
 
     stringstream source_ss;
@@ -52,7 +51,9 @@ private:
 
     int initial_state = 0;
 
-    void add_states();
+    Token get_token();
+
+    void add_final_states();
 
     void add_identifier_rule();
 

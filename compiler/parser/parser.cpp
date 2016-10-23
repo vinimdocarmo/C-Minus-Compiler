@@ -3,273 +3,353 @@
 
 void Parser::consume_token() {
     do {
-        curr_token = lex->get_token();
+        curr_index_token++;
+        curr_token = tokens.at(curr_index_token);
     } while (curr_token.type == Token_Type::TK_WHITESPACE);
 }
 
 bool Parser::terminal(Token_Type token_type) {
-    bool isEqual = curr_token.type == token_type;
-    consume_token();
+    bool isEqual = match(token_type);
+
+    if (isEqual) {
+        consume_token();
+    }
+
     return isEqual;
 }
 
 bool Parser::terminal(string lexeme) {
     bool isEqual = curr_token.lexeme == lexeme;
-    consume_token();
+
+    if (isEqual) {
+        consume_token();
+    }
+
     return isEqual;
 }
 
-void Parser::parse() {
-    if (!program()) {
-        cerr << "Erro de compilação!" << endl;
-        exit(EXIT_FAILURE);
-    } else {
-        cout << "Compilação bem sucedida!" << endl;
-    };
+void Parser::backtrack(int backtracked_index) {
+    curr_index_token = backtracked_index;
+    curr_token = tokens.at(curr_index_token);
 }
 
+bool Parser::match(Token_Type type) {
+    return curr_token.type == type;
+}
+
+void Parser::parse() {
+    if (program() && match(Token_Type::TK_EOS)) {
+        cout << "Compilation success" << endl;
+    } else {
+        cerr << "Compilation error" << endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
+// program → declaration-list
 bool Parser::program() {
     return declaration_list();
 }
 
+// declaration-list → declaration declaration-list-recur | declaration
 bool Parser::declaration_list() {
-    return declaration() && declaration_list_recur();
+    unsigned int saved_index = curr_index_token;
+
+    return (declaration() && declaration_list_recur())
+           || (backtrack(saved_index), declaration());
 }
 
+// declaration-list-recur → declaration declaration-list-recur | declaration
 bool Parser::declaration_list_recur() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, declaration() && declaration_list_recur())
-           || (curr_token = *save, declaration());
+    if (declaration() && declaration_list_recur()) {
+        return true;
+    }
+
+    backtrack(saved_index);
+
+
+    return declaration();
 }
 
+// declaration → var-declaration | fun-declaration
 bool Parser::declaration() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, var_declaration())
-           || (curr_token = *save, fun_declaration());
+    return (var_declaration())
+           || (backtrack(saved_index), fun_declaration());
 }
 
+// var-declaration → type-specifier ID ; | type-specifier ID [ NUM ] ;
 bool Parser::var_declaration() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, type_specifier() && terminal(Token_Type::TK_ID) && terminal(";"))
-           || (curr_token = *save, type_specifier() && terminal(Token_Type::TK_ID) && terminal("[") &&
+    return (type_specifier() && terminal(Token_Type::TK_ID) && terminal(";"))
+           || (backtrack(saved_index), type_specifier() && terminal(Token_Type::TK_ID) && terminal("[") &&
                                    terminal(Token_Type::TK_NUMBER) && terminal("]") && terminal(";"));
 }
 
+// type-specifier → int | void
 bool Parser::type_specifier() {
-    Token *save = &curr_token;
-
-    return (curr_token = *save, terminal("int")) || (curr_token = *save, terminal("void"));
+    return terminal("int") || terminal("void");
 }
 
+// fun-declaration → type-specifier ID ( params ) compound-stmt
 bool Parser::fun_declaration() {
     return type_specifier() && terminal(Token_Type::TK_ID) && terminal("(") && params() && terminal(")") &&
            compound_stmt();
 }
 
+// params → param-list | void
 bool Parser::params() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, param_list())
-           || (curr_token = *save, terminal("void"));
+    return (param_list())
+           || (backtrack(saved_index), terminal("void"));
 }
 
+// param-list → param param-list-recur | param
 bool Parser::param_list() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, param() && param_list_recur())
-           || (curr_token = *save, param());
+    return (param() && param_list_recur())
+           || (backtrack(saved_index), param());
 }
 
+
+// param-list-recur → , param param-list-recur | , param
 bool Parser::param_list_recur() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, terminal(",") && param() && param_list_recur())
-           || (curr_token = *save, terminal(",") && param());
+    return (terminal(",") && param() && param_list_recur())
+           || (backtrack(saved_index), terminal(",") && param());
 }
 
+// param → type-specifier ID | type-specifier ID [ ]
 bool Parser::param() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, type_specifier() && terminal(Token_Type::TK_ID))
-           || (curr_token = *save, type_specifier() && terminal(Token_Type::TK_ID) && terminal("[") && terminal("]"));
+    return (type_specifier() && terminal(Token_Type::TK_ID))
+           || (backtrack(saved_index), type_specifier() && terminal(Token_Type::TK_ID) && terminal("[") && terminal("]"));
 }
 
+// { local-declarations statement-list } | { local-declarations } | { statement-list } | { }
 bool Parser::compound_stmt() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, terminal("{") && local_declarations() && statement_list() && terminal("}"))
-           || (curr_token = *save, terminal("{") && local_declarations() && terminal("}"))
-           || (curr_token = *save, terminal("{") && terminal("}"));
+    return (terminal("{") && local_declarations() && statement_list() && terminal("}"))
+           || (backtrack(saved_index), terminal("{") && local_declarations() && terminal("}"))
+           || (backtrack(saved_index), terminal("{") && statement_list() && terminal("}"))
+           || (backtrack(saved_index), terminal("{") && terminal("}"));
 }
 
+// local-declarations → var-declaration local-declarations-recur | var-declaration
 bool Parser::local_declarations() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, var_declaration() && local_declarations_recur())
-           || (curr_token = *save, var_declaration());
+    return (var_declaration() && local_declarations_recur())
+           || (backtrack(saved_index), var_declaration());
 }
 
+// local-declarations → var-declaration local-declarations-recur | var-declaration
 bool Parser::local_declarations_recur() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, var_declaration() && local_declarations_recur())
-           || (curr_token = *save, var_declaration());
+    return (var_declaration() && local_declarations_recur())
+           || (backtrack(saved_index), var_declaration());
 }
 
+// statement-list → statement statement-list-recur | statement
 bool Parser::statement_list() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, statement() && statement_list_recur())
-           || (curr_token = *save, statement());
+    return (statement() && statement_list_recur())
+           || (backtrack(saved_index), statement());
 }
 
+// statement-list → statement statement-list-recur | statement
 bool Parser::statement_list_recur() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, statement() && statement_list_recur())
-           || (curr_token = *save, statement());
+    return (statement() && statement_list_recur())
+           || (backtrack(saved_index), statement());
 }
 
+// statement → expression-stmt | compound-stmt | selection-stmt | iteration-stmt | return-stmt
 bool Parser::statement() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, expression_stmt())
-           || (curr_token = *save, compound_stmt())
-           || (curr_token = *save, selection_stmt())
-           || (curr_token = *save, iteration_stmt())
-           || (curr_token = *save, return_stmt());
+    return (expression_stmt())
+           || (backtrack(saved_index), compound_stmt())
+           || (backtrack(saved_index), selection_stmt())
+           || (backtrack(saved_index), iteration_stmt())
+           || (backtrack(saved_index), return_stmt())
+           || (backtrack(saved_index), read_stmt())
+           || (backtrack(saved_index), write_stmt());
 }
 
+// expression-stmt → expression ; | ;
 bool Parser::expression_stmt() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, expression() && terminal(";"))
-           || (curr_token = *save, terminal(";"));
+    return (expression() && terminal(";"))
+           || (backtrack(saved_index), terminal(";"));
 }
 
+// selection-stmt → if ( expression ) statement | if ( expression ) statement else statement
 bool Parser::selection_stmt() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, terminal("if") && terminal("(") && expression() && terminal(")") && statement())
-           || (curr_token = *save, terminal("if") && terminal("(") && expression() && terminal(")") && statement() &&
+    return (terminal("if") && terminal("(") && expression() && terminal(")") && statement())
+           || (backtrack(saved_index), terminal("if") && terminal("(") && expression() && terminal(")") && statement() &&
                                    terminal("else") && statement());
 }
 
+// iteration-stmt → while ( expression ) statement
 bool Parser::iteration_stmt() {
     return terminal("while") && terminal("(") && expression() && terminal(")") && statement();
 }
 
+// return-stmt → return ; | return expression ;
 bool Parser::return_stmt() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, terminal("return") && terminal(";"))
-           || (curr_token = *save, terminal("return") && expression() && terminal(";"));
+    return (terminal("return") && terminal(";"))
+           || (backtrack(saved_index), terminal("return") && expression() && terminal(";"));
 }
 
+
+// read-stmt → read ( ID ) ;
+bool Parser::read_stmt() {
+    return terminal("read") && terminal("(") && var() && terminal(")") && terminal(";");
+}
+
+// write-stmt → write ( expression ) ;
+bool Parser::write_stmt() {
+    return terminal("write") && terminal("(") && expression() && terminal(")") && terminal(";");
+}
+
+// expression → var = expression | simple-expression
 bool Parser::expression() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, var() && terminal("=") && expression())
-           || (curr_token = *save, simple_expression());
+    return (var() && terminal("=") && expression())
+           || (backtrack(saved_index), simple_expression());
 }
 
+// var → ID | ID [ expression ]
 bool Parser::var() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, terminal(Token_Type::TK_ID))
-           || (curr_token = *save, terminal(Token_Type::TK_ID) && terminal("[") && expression() && terminal("]"));
+    return (terminal(Token_Type::TK_ID))
+           || (backtrack(saved_index), terminal(Token_Type::TK_ID) && terminal("[") && expression() && terminal("]"));
 }
 
+// simple-expression → additive-expression relop additive-expression | additive-expression
 bool Parser::simple_expression() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, additive_expression() && re_lop() && additive_expression())
-           || (curr_token = *save, additive_expression());
+    return (additive_expression() && re_lop() && additive_expression())
+           || (backtrack(saved_index), additive_expression());
 }
 
+// relop → <= | < | > | >= | == | !=
 bool Parser::re_lop() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, terminal("<="))
-           || (curr_token = *save, terminal("<"))
-           || (curr_token = *save, terminal(">"))
-           || (curr_token = *save, terminal(">="))
-           || (curr_token = *save, terminal("=="))
-           || (curr_token = *save, terminal("!="));
+    return (terminal("<="))
+           || (backtrack(saved_index), terminal("<"))
+           || (backtrack(saved_index), terminal(">"))
+           || (backtrack(saved_index), terminal(">="))
+           || (backtrack(saved_index), terminal("=="))
+           || (backtrack(saved_index), terminal("!="));
 }
 
+// additive-expression → term additive-expression-recur | term
 bool Parser::additive_expression() {
-    return term() && additive_expression_recur();
+    unsigned int saved_index = curr_index_token;
+
+    return (term() && additive_expression_recur())
+           || (backtrack(saved_index), term());
 }
 
+// additive-expression-recur → addop term additive-expression-recur | addop term
 bool Parser::additive_expression_recur() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, add_op() && term() && additive_expression_recur())
-           || (curr_token = *save, add_op() && term());
+    return (add_op() && term() && additive_expression_recur())
+           || (backtrack(saved_index), add_op() && term());
 }
 
+// addop → + | -
 bool Parser::add_op() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, terminal("+"))
-           || (curr_token = *save, terminal("-"));
+    return (terminal("+"))
+           || (backtrack(saved_index), terminal("-"));
 }
 
+// term → factor term-recur | factor
 bool Parser::term() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, factor() && term_recur())
-           || (curr_token = *save, factor());
+    return (factor() && term_recur())
+           || (backtrack(saved_index), factor());
 }
 
+
+// term-recur → mulop factor term-recur | mulop factor
 bool Parser::term_recur() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, mul_op() && factor() && term_recur())
-           || (curr_token = *save, mul_op() && factor());
+    return (mul_op() && factor() && term_recur())
+           || (backtrack(saved_index), mul_op() && factor());
 }
 
+// mulop → * | /
 bool Parser::mul_op() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, terminal("*"))
-           || (curr_token = *save, terminal("/"));
+    return (terminal("*"))
+           || (backtrack(saved_index), terminal("/"));
 }
 
+// factor → ( expression ) | var | call | NUM
 bool Parser::factor() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, terminal("(") && expression() && terminal(")"))
-           || (curr_token = *save, var())
-           || (curr_token = *save, call())
-           || (curr_token = *save, terminal(Token_Type::TK_NUMBER));
+    return (terminal("(") && expression() && terminal(")"))
+           || (backtrack(saved_index), var())
+           || (backtrack(saved_index), call())
+           || (backtrack(saved_index), terminal(Token_Type::TK_NUMBER));
 }
 
+// call → ID ( args ) | ID ( )
 bool Parser::call() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, terminal(Token_Type::TK_ID) && terminal("(") && args() && terminal(")"))
-           || (curr_token = *save, terminal(Token_Type::TK_ID) && terminal("(") && terminal(")"));
+    return (terminal(Token_Type::TK_ID) && terminal("(") && args() && terminal(")"))
+           || (backtrack(saved_index), terminal(Token_Type::TK_ID) && terminal("(") && terminal(")"));
 }
 
+// args → arg-list
 bool Parser::args() {
     return arg_list();
 }
 
+// arg-list → expression arg-list-recur | expression
 bool Parser::arg_list() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, expression() && arg_list_recur())
-           || (curr_token = *save, expression());
+    return (expression() && arg_list_recur())
+           || (backtrack(saved_index), expression());
 }
 
+// arg-list-recur → , expression arg-list-recur | , expression
 bool Parser::arg_list_recur() {
-    Token *save = &curr_token;
+    unsigned int saved_index = curr_index_token;
 
-    return (curr_token = *save, terminal(",") && expression() && arg_list_recur())
-           || (curr_token = *save, expression());
+    return (terminal(",") && expression() && arg_list_recur())
+           || (backtrack(saved_index), terminal(",") && expression());
 }

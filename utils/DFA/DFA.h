@@ -16,7 +16,9 @@ public:
 
     ~DFA(void);
 
-    void add_state(int s, bool isfinal);
+    void add_state(int s);
+
+    void add_final_state(int s);
 
     void add_transition(int src, T input, int dest);
 

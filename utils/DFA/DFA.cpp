@@ -6,8 +6,14 @@
 template<typename T>
 DFA<T>::DFA(int initial, bool isfinal) {
     this->m_initial = this->m_state = initial;
-    add_state(initial, isfinal);
-    add_state(-1, false); // invalid dead state
+
+    if (isfinal) {
+        add_final_state(initial);
+    } else {
+        add_state(initial);
+    }
+
+    add_state(-1); // invalid dead state
 }
 
 template<typename T>
@@ -15,9 +21,14 @@ DFA<T>::~DFA(void) {
 }
 
 template<typename T>
-void DFA<T>::add_state(int s, bool isfinal) {
+void DFA<T>::add_state(int s) {
     m_states.insert(s);
-    if (isfinal) m_final_states.insert(s);
+}
+
+template<typename T>
+void DFA<T>::add_final_state(int s) {
+    m_states.insert(s);
+    m_final_states.insert(s);
 }
 
 template<typename T>
